@@ -23,15 +23,26 @@ This document specifies the MVP architecture for the developer onboarding workfl
 
 ### Core vs Future Features
 
-**MVP**: Create developer onboarding cases; generate and review plans; track role-owned tasks and setup requests for client GitHub, VS Code, Docker or approved runtime, Cisco VPN, Zoom, and Citrix VDI; manage approvals, evidence, blockers, and escalations; provide approved-source support; record an audit trail.
+**MVP**: Create developer onboarding cases; generate and review plans; track role-owned tasks and setup requests for client GitHub, VS Code, Docker or approved runtime, Cisco VPN, Zoom, and Citrix VDI; manage approvals, evidence, blockers, and escalations; provide approved-source support; record an audit trail. MVP execution is narrowed to the seed profile defined below.
 
 **Future Work**: Real HRIS, ITSM, GitHub, IAM, VPN, VDI, calendar, messaging, and collaboration integrations; payroll or benefits changes; multi-tenant SaaS and billing; offboarding, transfers, contractor workflows, access recertification; advanced analytics and multi-region deployment.
+
+### Seed Profile Scope (MVP / Week 3)
+
+The MVP execution scope is narrowed to a single defined seed profile:
+
+- **One mocked application role** (no SSO): authentication/authorization remains SSO-ready by design, but SSO integration is not exercised in the seed.
+- **One relational database** persisting all workflow entities.
+- **One seed developer**: a single representative developer onboarding case profile.
+- **One sensitive request**: mock GitHub access with a fixed, least-privilege permission, exercised end to end (proposal → UI approval → mock adapter logging → audit).
+
+VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI remain strictly on the case's conceptual checklist as trackable tasks; they are not provisioned in the MVP. For local Docker versus VDI and for real VPN profiles, the default behavior is **do not provision; track only**.
 
 ### Technical Architecture Decisions
 
 | ID | Decision | Rationale / Consequence |
 |---|---|---|
-| ADR-001 | Use CrewAI with a sequential, coordinator-led flow for MVP plan generation and support. | Matches configured runtime and keeps execution understandable and testable. Do not enable autonomous privileged tool execution. |
+| ADR-001 | Use CrewAI with a strictly sequential process for MVP plan generation and support: `process: sequential`, `memory: false`, `allow_delegation: false`, no dynamic delegation. | Matches configured runtime and keeps execution understandable and testable. Do not enable autonomous privileged tool execution. |
 | ADR-002 | Persist cases, tasks, approvals, evidence, blockers, and audit events in an application database. | PRD requires durable, deterministic workflow state. Database technology remains a Build choice; a relational store is the recommended default because the records have explicit relationships and status transitions. |
 | ADR-003 | Use mocked external-system adapters behind typed service interfaces. | PRD explicitly scopes external interactions to mocks unless later approved. Keep vendor-specific behavior out of the domain workflow. |
 | ADR-004 | Use JSON request/response APIs; do not require token streaming for MVP. | PRD specifies response-time targets but no streaming requirement. A simpler contract helps trace, validate, and audit results. |
@@ -48,7 +59,7 @@ Use at most four specialized agents. Agents return structured recommendations; t
 
 | Agent | Role and goal | Allowed tools / data | Restrictions |
 |---|---|---|---|
-| `onboarding_coordinator` | Build a role-based plan, summarize case readiness, and identify missing fields or blockers. | Permission-filtered case/task reads; plan-generation service; audit event proposal. | Cannot approve access or directly mutate authoritative state. |
+| `onboarding_coordinator` | Produce the initial case summary and the final readiness summary, build a role-based plan, and identify missing fields or blockers. | Permission-filtered case/task reads; plan-generation service; audit event proposal. | Cannot delegate dynamically; fixed sequential task order only. Cannot approve access or directly mutate authoritative state. |
 | `developer_setup_agent` | Prepare and track request details and evidence criteria for GitHub, VS Code, Docker/runtime, VPN, Zoom, and Citrix VDI tasks. | Mock request adapters; approved tool catalog; task/evidence reads. | Cannot execute real external writes in MVP; access requests require human review and least privilege. |
 | `security_compliance_agent` | Flag sensitive requests, missing approvals, policy conflicts, and prohibited data. | Policy knowledge base; access-request summary; approval status; audit event proposal. | Cannot grant access or override denial; must not receive secrets or source code. |
 | `employee_support_agent` | Answer onboarding questions from approved policies and guide users to next actions. | Retrieval over approved knowledge articles; permission-filtered task status; escalation service. | Cite retrieved sources when available; escalate sensitive, missing, or low-confidence answers rather than guessing. |
@@ -56,14 +67,14 @@ Use at most four specialized agents. Agents return structured recommendations; t
 ### Task / Turn Orchestration
 
 1. API validates the caller, role, required case fields, and request schema.
-2. For plan generation, the application loads only authorized, necessary case and role-profile fields and passes them to the coordinator. The coordinator may request setup-task recommendations from the developer setup agent and risk flags from the security/compliance agent.
-3. The application validates the structured result against allowed task types, required fields, role permissions, and MVP policy. Invalid or incomplete results are rejected and surfaced for correction; they are not written as complete tasks.
-4. A human reviews the proposed plan and confirms before task notifications or sensitive requests are advanced.
+2. For plan generation, the application loads only authorized, necessary case and role-profile fields and runs the CrewAI kickoff. Execution follows a fixed sequential order with no dynamic delegation: (1) case summary by `onboarding_coordinator`, (2) setup by `developer_setup_agent`, (3) security by `security_compliance_agent`, and (4) final summary by `onboarding_coordinator`.
+3. The application validates the structured result against allowed task types, required fields, role permissions, and MVP policy. Invalid or incomplete outputs halt execution and are surfaced for correction; they are not written as complete tasks.
+4. Plan generation is strictly separated from mock execution: the Crew only generates and persists the proposal. Confirmation, changes, or rejection happen exclusively via the UI (human gate). A human reviews the proposed plan and confirms before task notifications or sensitive requests are advanced; mock adapters log the `request_id` and evidence only after approval in the UI, and executing these actions in a single Crew turn is prohibited.
 5. The application persists accepted tasks and audit events in one transaction where supported. State changes use validated transitions and are attributed to the initiating actor or system service.
 6. Evidence and approvals are recorded independently. Sensitive tasks cannot reach complete until the required human approval and evidence check are both present.
 7. Support requests retrieve only approved knowledge and authorized task context. Missing, sensitive, or low-confidence questions route to a named HR, IT, or security owner.
 
-**Expected agent output**: JSON object validated against application schemas. Plan output includes task type, summary, suggested owner role, due-date basis, dependencies, sensitivity flag, approval requirement, validation method, and rationale. Agents do not choose arbitrary owners, permissions, due dates, or connector targets outside the validated role/profile and policy inputs.
+**Expected agent output**: JSON object validated against application schemas. Tasks that produce an Onboarding Plan, an Access Request, or a Support Response must declare `output_pydantic` with the corresponding application schema; outputs that fail validation halt execution and must not become persisted tasks. Plan output includes task type, summary, suggested owner role, due-date basis, dependencies, sensitivity flag, approval requirement, validation method, and rationale. Agents do not choose arbitrary owners, permissions, due dates, or connector targets outside the validated role/profile and policy inputs.
 
 **Context and memory**: No persistent agent memory is required. Each turn receives the minimum necessary case/task context and approved knowledge snippets. Do not pass credentials, MFA secrets, recovery codes, private keys, personal access tokens, or client source code to the LLM.
 
@@ -73,9 +84,11 @@ Use at most four specialized agents. Agents return structured recommendations; t
 
 ### Runtime-Conditional Configuration: CrewAI
 
-- Use Python CrewAI agents and tasks, with a sequential process for bounded MVP flows. Keep orchestration definitions/configuration separate from API handlers.
-- Use explicit task context chaining: validated case summary → setup recommendations → security flags → coordinator summary. Omit an agent from a path when its expertise is not needed.
-- Configure a low, explicit per-agent iteration limit and a bounded application timeout; verify behavior with the selected CrewAI version and tests. Do not rely on the framework's agent memory as persistence.
+- Use Python CrewAI agents and tasks, with a strictly sequential process for bounded MVP flows: `process: sequential`, `memory: false`, `allow_delegation: false`. Keep orchestration definitions/configuration separate from API handlers.
+- Specify agent and task configurations in `config/agents.yaml` and `config/tasks.yaml`; keep both files version-controlled and free of secret values.
+- Remove dynamic delegation from `onboarding_coordinator`. The fixed execution order is: (1) case summary by `onboarding_coordinator`, (2) setup by `developer_setup_agent`, (3) security by `security_compliance_agent`, (4) final summary by `onboarding_coordinator`. Use explicit task context chaining along this order; omit an agent from a path only when its expertise is not needed.
+- Require `output_pydantic` schemas for the Onboarding Plan, Access Request, and Support Response tasks. An output that fails schema validation halts execution and must not become persisted tasks.
+- Configure a low, explicit per-agent iteration limit and a bounded application timeout; verify behavior with the selected CrewAI version and tests. Do not rely on the framework's agent memory as persistence (`memory: false`).
 - Expose only narrow application services or mocked adapters to agents. No direct database credentials, shell access, unrestricted network access, or real provisioning tools.
 - Validate all model output against schemas before any persistence. Preserve the original recommendation, validation result, and user decision in the audit trail without sensitive values.
 - Framework version, model/provider, model settings, and secret environment variable names must be recorded in implementation configuration, not hardcoded in this SAD. No secret values belong in source control or generated artifacts.
@@ -135,7 +148,7 @@ Keep employee fields to those required for assignment and workflow. Keep evidenc
 
 ### Runtime Integration Layer
 
-The HTTP/API layer calls an application service, which loads authorized context, invokes the CrewAI orchestration boundary, validates structured output, and commits accepted changes. The domain service owns state transitions; CrewAI does not write directly to the database. A worker/scheduler may process reminders and status checks, as allowed by PRD, but MVP external status checks use mocks. Record correlation ID, agent/task name, duration, outcome, token/cost metadata if available, adapter result, and validation result with sensitive-data filtering.
+The HTTP/API layer calls an application service, which loads authorized context, invokes the CrewAI orchestration boundary, validates structured output, and commits accepted changes. The domain service owns state transitions; CrewAI does not write directly to the database. Kickoff (plan/proposal generation) is strictly separated from mock execution: the Crew only generates and persists the proposal, and confirmation, changes, or rejection occur only via the UI human gate. Mock adapters log the `request_id` and evidence solely after approval in the UI; combining generation and adapter actions in a single Crew turn is prohibited. A worker/scheduler may process reminders and status checks, as allowed by PRD, but MVP external status checks use mocks. Record correlation ID, agent/task name, duration, outcome, token/cost metadata if available, adapter result, and validation result with sensitive-data filtering.
 
 ### Authentication & Secrets
 
@@ -176,8 +189,8 @@ Load provider/database credentials only from environment or an approved secrets 
 | Element | Runtime behavior |
 |---|---|
 | Synchronous API request | Handles case/task reads and writes; plan generation and support remain within their PRD response budgets. |
-| CrewAI sequential flow | Uses bounded role-specific tasks with minimal context; returns structured data for application validation. |
-| Human approval | Holds sensitive access work until authorized approval; denial and requested changes are persisted and visible. |
+| CrewAI sequential flow | Uses bounded role-specific tasks in fixed sequential order (case summary → setup → security → final summary) with minimal context; returns `output_pydantic`-validated structured data for application validation; invalid output halts execution. |
+| Human approval | Holds sensitive access work until authorized approval; confirmation, changes, and rejection occur only via the UI; mock adapters log `request_id` and evidence only after approval. Denial and requested changes are persisted and visible. |
 | Background scheduler/worker | Sends reminders or performs mock status checks; retries only idempotent transient work and reports final failures. |
 | Audit writer | Records actor, timestamp, action, object, and outcome for required workflow/access events. |
 
@@ -215,7 +228,7 @@ Load provider/database credentials only from environment or an approved secrets 
 
 ### MVP Integration Set and Error Propagation
 
-Implement mock adapters for HRIS/profile lookup, ITSM requests, client GitHub access, IAM/VPN/VDI, Zoom/calendar readiness, notifications, and approved knowledge retrieval. VS Code and Docker/runtime setup can be represented by validated request/task workflows and evidence checks; do not claim direct provisioning where the PRD specifies tracking and mock requests. Each adapter returns a normalized request ID, status, safe message, and correlation ID.
+For the seed profile (MVP / Week 3), implement end to end only the mock adapter for the single sensitive request — mock GitHub access with a fixed, least-privilege permission — plus the minimal HRIS/profile lookup and approved-knowledge retrieval mocks needed to run one seed developer case. ITSM, IAM/VPN/VDI, Zoom/calendar, and notification adapters remain interface definitions with deterministic mock stubs only. VS Code, Docker/runtime, VPN, Zoom, and Citrix VDI appear strictly as conceptual checklist tasks on the case; do not claim direct provisioning, and apply the default "do not provision; track only" behavior for local Docker versus VDI and real VPN profiles. Each adapter returns a normalized request ID, status, safe message, and correlation ID, and logs `request_id` and evidence only after approval in the UI.
 
 An adapter error leaves the task incomplete, records a sanitized failure, creates or updates a blocker, and exposes an owner plus manual fallback. A denied request is distinct from a failed integration. Only add real API writes after explicit stakeholder and security approval and a revised architecture decision.
 
@@ -248,8 +261,8 @@ Keep database queries paginated for case lists, index fields used for status/own
 
 - **Unit**: Required field validation; plan schema/policy validation; task state-transition rules; role authorization; approval gates; evidence requirements; secret/personal-data redaction; adapter result normalization; audit event creation.
 - **Integration**: API to database persistence and audit; CrewAI output validation with deterministic/fake model responses; each mock adapter's success/denial/unavailable/invalid response; support retrieval permissions and escalation; idempotent retry behavior.
-- **Smoke/acceptance**: Create developer case; review generated plan; submit mock requests for all six named developer tool/access categories; approve/deny sensitive requests; record evidence; surface blockers and manual fallback; verify role-specific views and audit history.
-- **Runtime-specific**: Verify CrewAI task ordering/context, bounded iterations/timeouts, structured output parsing, failure behavior, and that no agent has direct database or unrestricted connector access.
+- **Smoke/acceptance**: Create the seed developer case; review the generated plan; exercise the single sensitive mock GitHub access request end to end (proposal → UI approval → mock adapter logging of `request_id` and evidence → audit); verify VS Code, Docker, VPN, Zoom, and Citrix VDI appear strictly as track-only conceptual checklist tasks; approve/deny sensitive requests; record evidence; surface blockers and manual fallback; verify role-specific views and audit history.
+- **Runtime-specific**: Verify CrewAI fixed sequential task ordering/context (case summary → setup → security → final summary), bounded iterations/timeouts, `output_pydantic` parsing with halt-on-invalid behavior, failure behavior, and that no agent has direct database or unrestricted connector access.
 - **Security**: Test unauthorized case access, approval forgery, cross-client access, prompt injection in knowledge content, sensitive-data leakage in logs/audits, and secret/source-code collection attempts. Complete dependency audit and security assessment before delivery.
 - **Traceability**: Map tests to FR-001 through FR-012 and the PRD's performance/security/reliability requirements. Include metrics for readiness and operational outcomes in the pilot, not only component tests.
 
@@ -264,7 +277,7 @@ These are pass/fail criteria for the MVP contract. Golden datasets, judge rubric
 | EC-003 | Latency | Grounded support response duration. | Under 10 seconds. | Code-based wall-clock measurement for supported knowledge questions. | PRD Performance Requirements |
 | EC-004 | Safety | Low-confidence or sensitive support questions escalated instead of answered without authority. | At least 90% escalation accuracy on labeled evaluation cases; no answer may disclose a secret or unauthorized client code. | Labeled human-reviewed cases plus deterministic prohibited-content checks. | PRD §7 Technical Metrics; FR-011; security rules |
 | EC-005 | Security | Access-request status changes and approvals have audit events; required approvals/evidence gate sensitive completion. | 100% audit coverage; 100% of tested sensitive completion attempts without required approval/evidence are rejected. | Integration tests and audit-event reconciliation. | PRD §7 Technical Metrics; FR-003/006/008/012; Build-Agent Decision Rules |
-| EC-006 | Security | Prohibited secrets and client source code are collected, persisted, sent to agents, or written to logs/audits. | Zero occurrences in tested workflows and stored/logged payloads. | Adversarial input tests and automated data scans. | PRD §5 Security & Compliance; MRD-006 |
+| EC-006 | Security | Occurrences of secrets or client source code in prompt, log, audit, or database. | Zero occurrences. | Adversarial input tests and automated data scans. | PRD §5 Security & Compliance; MRD-006 |
 | EC-007 | Cost | LLM cost per onboarding case. | Track and report in Build; numeric pass threshold requires operator input after baseline measurement. | Provider usage metadata/cost accounting per case, reviewed against an operator-approved limit. | PRD §7 Technical Metrics states target is to be set during Build. |
 
 EC-007 is intentionally not assigned an invented dollar amount. It is an open decision for the operator before cost can be graded as pass/fail. Business pilot KPIs such as 90% first-day readiness and 85% setup completion by start date are outcome measures; report them during pilot evaluation and do not treat them as architecture-only unit test thresholds.
@@ -290,7 +303,9 @@ EC-007 is intentionally not assigned an invented dollar amount. It is an open de
 ## Architecture Validation Checklist
 
 - [x] PRD and MRD requirements mapped to architecture components and evaluation criteria.
-- [x] Four-agent maximum and CrewAI sequential orchestration defined.
+- [x] Four-agent maximum and strictly sequential CrewAI orchestration defined (`process: sequential`, `memory: false`, `allow_delegation: false`; fixed task order; `output_pydantic` schemas; configs in `config/agents.yaml` / `config/tasks.yaml`).
+- [x] Kickoff separated from mock execution; confirmation/changes/rejection via UI human gate only; mock adapters log `request_id`/evidence solely after approval.
+- [x] Seed profile scope (MVP / Week 3) recorded with "do not provision; track only" defaults; EC-006 rewritten with zero tolerance.
 - [x] Frontend/backend responsibilities and JSON contracts specified; framework remains an explicit Build choice.
 - [x] Secrets are excluded from artifacts; environment/secrets-manager handling is specified without secret values.
 - [x] MVP and Future Work boundaries are explicit; real integrations are deferred.
@@ -323,8 +338,8 @@ EC-007 is intentionally not assigned an invented dollar amount. It is an open de
 - Which HRIS and ticket/request system should mock adapter contracts model first?
 - Which client GitHub org/repositories, permissions, approvers, branch rules, and validation method apply per developer profile?
 - Which VS Code extensions and source-control validation are required for each client project?
-- Is local Docker permitted, or must container work use Citrix VDI or an approved remote runtime?
-- Which Cisco VPN profiles, network groups, Citrix images, mapped resources, and Zoom policies apply?
+- Is local Docker permitted, or must container work use Citrix VDI or an approved remote runtime? (MVP default: do not provision; track only.)
+- Which Cisco VPN profiles, network groups, Citrix images, mapped resources, and Zoom policies apply? (MVP default for real VPN profiles: do not provision; track only.)
 - What employee-data, audit-event, and support-transcript retention/deletion policy applies, and in which jurisdictions will the MVP be evaluated?
 - What exact SLA targets are contractual versus pilot targets, and how should due dates/time zones be calculated?
 - Which approved policy/FAQ sources and content owners will supply grounded support answers?
@@ -337,3 +352,4 @@ EC-007 is intentionally not assigned an invented dollar amount. It is an open de
 - Artifact: `project-context/2.build/sad.md`
 - Source artifacts: `project-context/1.define/mrd.md`, `project-context/1.define/prd.md`, `aamad.config.yml`
 - Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
+- Update: 2026-10-05 — architectural fixes applied: strictly sequential CrewAI orchestration (`process: sequential`, `memory: false`, `allow_delegation: false`) with fixed task order and `output_pydantic` validation; kickoff separated from UI human-in-the-loop execution; seed profile scope narrowed (MVP / Week 3); EC-006 metric rewritten with zero tolerance.
