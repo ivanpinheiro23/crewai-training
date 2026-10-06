@@ -1,0 +1,7 @@
+body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1a1a1a; }
+main { max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+section { background: #fff; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+label { display: block; margin-bottom: .75rem; font-weight: 600; }
+input, textarea { display: block; width: 100%; box-sizing: border-box; margin-top: .25rem; padding: .5rem; font: inherit; }
+button { padding: .5rem 1rem; font: inherit; cursor: pointer; }
+.muted { color: #666; }
