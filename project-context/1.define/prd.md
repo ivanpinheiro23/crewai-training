@@ -4,28 +4,27 @@
 
 ### Problem Statement
 
-Employee onboarding for developer roles is fragmented across HR, IT, security, hiring managers, client account owners, and new hires. New employees often need multiple requests completed before they can contribute: employee profile creation, hardware or virtual desktop readiness, client GitHub repository access, VS Code setup, Docker or approved container runtime access, Cisco VPN enrollment, Zoom activation, Citrix VDI entitlement, policy acknowledgements, and role-specific training. When these tasks are tracked through email, spreadsheets, chat messages, and separate ticketing systems, blockers are easy to miss and ownership becomes unclear.
+Employee onboarding for developer roles is fragmented across HR, IT, security, hiring managers, client account owners, and new hires. New employees often need multiple requests completed before they can contribute: employee profile creation, hardware or virtual desktop readiness, VS Code setup, Docker or approved container runtime access, Cisco VPN enrollment, Zoom activation, Citrix VDI entitlement, policy acknowledgements, and role-specific training. When these tasks are tracked through email, spreadsheets, chat messages, and separate ticketing systems, blockers are easy to miss and ownership becomes unclear.
 
-The operational impact is delayed time-to-productivity, repeated HR/IT follow-up, inconsistent compliance evidence, and poor new-hire experience. For developer onboarding, the highest-value readiness milestone is not only "employee record created" but "developer can securely access the client environment, repositories, collaboration tools, and approved development runtime."
+The operational impact is delayed time-to-productivity, repeated HR/IT follow-up, inconsistent compliance evidence, and poor new-hire experience. For developer onboarding, the highest-value readiness milestone is not only "employee record created" but "developer can securely access the approved development environment, collaboration tools, and runtime."
 
 ### Solution Overview
 
 The product is a multi-agent onboarding workflow assistant that coordinates onboarding tasks from offer acceptance through the first productive development task. It provides a role-based dashboard, automated task planning, request tracking, evidence-based completion checks, escalation handling, and a knowledge-grounded support assistant for onboarding questions.
 
-The MVP focuses on developer onboarding and explicitly includes request workflows for:
+The MVP focuses on developer onboarding and explicitly includes setup request workflows grouped under a single IT master ticket `IT0001` per onboarding case, with detailed items for:
 
-- Client GitHub organization and repository access
-- VS Code setup and source-control authentication
+- VS Code setup
 - Docker or approved container runtime access
 - Cisco Secure Client VPN access
 - Zoom account activation and meeting readiness
 - Citrix Workspace / Citrix VDI entitlement
 
-The system does not replace HRIS, identity, ticketing, source-control, or collaboration platforms. It coordinates requests, tracks readiness, creates auditable task state, and supports human approvals.
+The system does not replace HRIS, identity, ticketing, source-control, or collaboration platforms, and does not integrate with source-control platforms. It coordinates setup requests, tracks readiness, creates auditable task state, and supports human approvals.
 
 ### Strategic Rationale
 
-A multi-agent architecture fits this problem because onboarding is inherently cross-functional. Different agents can own HR coordination, IT provisioning, client GitHub access readiness, developer environment validation, compliance checks, manager enablement, and employee support. This separation makes responsibilities easier to audit and allows sensitive actions to remain behind permissioned services and human approvals.
+A multi-agent architecture fits this problem because onboarding is inherently cross-functional. Different agents can own HR coordination, IT provisioning, developer environment validation, compliance checks, manager enablement, and employee support. This separation makes responsibilities easier to audit and allows sensitive actions to remain behind permissioned services and human approvals.
 
 For the capstone, the configured runtime is `crewai`. The product requirements remain runtime-neutral, but Phase 2 implementation should use CrewAI-compatible agent roles and orchestration patterns where appropriate.
 
@@ -41,7 +40,6 @@ Primary personas:
 - HR / People Operations coordinator: needs visibility into employee readiness, documents, policy acknowledgements, and cross-team task completion.
 - IT service desk analyst: needs complete request details, approval status, due dates, access prerequisites, and escalation rules.
 - Security / IAM approver: needs least-privilege access requests, identity verification, audit trails, and evidence of approvals.
-- Client repository owner or technical lead: needs to approve GitHub organization, team, repository, and branch-permission access.
 - Hiring manager / project manager: needs visibility into readiness, blockers, first-week plan, and developer productivity milestones.
 - DevOps / platform owner: needs Docker, registry, VPN, VDI, and environment setup requests to comply with client and corporate policy.
 
@@ -62,12 +60,11 @@ Typical developer onboarding journey:
 1. HR starts onboarding record after hiring confirmation.
 2. System generates role-based onboarding plan for developer profile.
 3. Manager confirms project, client, location, employment type, start date, and required environments.
-4. IT receives requests for device, VS Code setup, Docker/runtime, Zoom, VPN, and Citrix VDI where required.
-5. Client repository owner receives GitHub organization/team/repository access request.
-6. Security/IAM validates VPN, VDI, source-code, and privileged access requirements.
-7. New hire completes profile, policy, tool, and meeting-readiness steps.
-8. System verifies readiness evidence and flags unresolved blockers.
-9. Manager confirms first productive development task can begin.
+4. System creates one master ticket `IT0001` with detailed software items for VS Code, Docker/runtime, Zoom, VPN, and Citrix VDI, then routes each item to its approver.
+5. Approved `IT0001` items are added to the IT execution queue and monitored until evidence validation is complete.
+6. New hire completes profile, policy, tool, and meeting-readiness steps.
+7. System verifies readiness evidence and flags unresolved blockers.
+8. Manager confirms first productive development task can begin.
 
 ### Competitive Landscape
 
@@ -112,13 +109,6 @@ Recommended collaboration pattern:
 - Tools: ITSM adapter or mock ticket adapter, tool catalog, device request service, validation checklist.
 - Runtime notes: May draft service requests; completion requires external status or human validation.
 
-#### Agent: client_github_access_agent
-
-- Role: Client repository access readiness agent.
-- Goal: Create and track least-privilege access requests for client GitHub organizations, teams, repositories, package registries, branch protections, project boards, and pull request permissions.
-- Tools: GitHub access request adapter or mock adapter, team/repository matrix, approval workflow, audit log.
-- Runtime notes: Must never request or store passwords, MFA secrets, private keys, personal access tokens, or client source code. Repository owner approval is required before marking access as complete.
-
 #### Agent: security_compliance_agent
 
 - Role: Security and compliance validation agent.
@@ -148,7 +138,6 @@ Required MVP adapters:
 
 - HRIS/mock HRIS for employee profile and start date.
 - ITSM/mock ticketing system for setup requests.
-- Client GitHub access/mock source-control request adapter.
 - IAM/mock identity adapter for VPN, VDI, and application access.
 - Calendar/meeting mock adapter for Zoom readiness.
 - Notification adapter for email/chat reminders.
@@ -156,12 +145,13 @@ Required MVP adapters:
 
 Developer setup request requirements:
 
-- Client GitHub repositories: organization, repository, team, permission level, approver, branch-protection requirements, registry access, project board access, expiration/review date.
-- VS Code: approved IDE availability, required extensions, source-control authentication, repository clone/open validation.
-- Docker: approved runtime, license eligibility, virtualization permission, registry access, security policy acknowledgement, runtime validation.
-- Cisco VPN: VPN profile, MFA enrollment, network group, connection validation.
-- Zoom: SSO activation, calendar integration where approved, test meeting validation.
-- Citrix VDI: Workspace app readiness, desktop image entitlement, VDI MFA, required application/network validation.
+- One master ticket `IT0001` must be created per onboarding case, with five software-specific items and full request metadata.
+- Each software item must follow the same sequence: detail capture -> approver decision -> IT queue entry -> evidence validation.
+- VS Code item: approved IDE availability, required extensions, settings sync policy, and successful IDE launch validation.
+- Docker item: approved runtime, license eligibility, virtualization permission, registry access, security policy acknowledgement, runtime validation.
+- Cisco VPN item: VPN profile, MFA enrollment, network group, connection validation.
+- Zoom item: corporate account activation and non-federated sign-in readiness, calendar integration where approved, and test meeting validation.
+- Citrix VDI item: Workspace app readiness, desktop image entitlement, VDI MFA, required application/network validation.
 
 ### Data Requirements
 
@@ -183,10 +173,13 @@ Core entities:
 Each setup/access task must capture:
 
 - Request ID
+- Master ticket ID (`IT0001`)
 - Request type
 - Requester
 - Approver
 - System owner
+- IT queue status
+- Queue entry timestamp
 - Due date
 - Status
 - Dependency/prerequisite
@@ -210,7 +203,7 @@ MVP infrastructure:
 
 Security architecture:
 
-- SSO-ready authentication design.
+- A user sign-in flow that does not depend on SSO; the exact mechanism is a project setup/security decision.
 - Role-based access control.
 - Least-privilege access request model.
 - No storage of passwords, MFA secrets, private keys, personal access tokens, recovery codes, or client source code.
@@ -249,35 +242,26 @@ User story: As an onboarding coordinator, I want the system to generate a role-b
 
 Acceptance criteria:
 
-- The generated plan includes HR, IT, security, manager, client GitHub, and employee tasks.
+- The generated plan includes HR, IT, security, manager, and employee tasks.
 - Each task has owner, due date, status, dependencies, and completion criteria.
 - The plan identifies sensitive access tasks that require approval.
+- The plan creates one master IT ticket `IT0001` for developer setup with five software-specific items.
+- Each `IT0001` item must include requester, approver, and IT queue routing fields before execution.
 - The coordinator can review and adjust the plan before notifications are sent.
 
-#### FR-003: Track Client GitHub Repository Access
+#### FR-003: Track VS Code Setup
 
-User story: As a client repository owner, I want clear GitHub access requests so that developers receive only the access required for their assigned project.
-
-Acceptance criteria:
-
-- The request captures GitHub organization, repositories, teams, permission level, project boards, package registry needs, and branch-protection considerations.
-- The request requires repository owner or client technical lead approval.
-- The system records approval, denial, or requested changes.
-- The system verifies access through approved evidence such as repository visibility, successful clone/codespace access, or ability to open a pull request.
-- The system does not collect or store GitHub passwords, MFA secrets, private keys, personal access tokens, or client source code.
-
-#### FR-004: Track VS Code Setup
-
-User story: As a new developer, I want clear instructions and validation for VS Code setup so that I can open the client repository and start development.
+User story: As a new developer, I want clear instructions and validation for VS Code setup so that I can prepare my approved development environment.
 
 Acceptance criteria:
 
 - The task lists approved IDE installation or availability requirements.
 - Required extensions can be listed by role or project.
-- Source-control authentication status is tracked without storing secrets.
-- Completion validates that the required repository can be opened in VS Code.
+- The settings sync policy is communicated to the developer.
+- The VS Code setup item is linked to master ticket `IT0001`, approved by the designated approver, and moved to the IT queue before execution.
+- Completion evidence confirms VS Code launches and required extensions are installed.
 
-#### FR-005: Track Docker or Approved Runtime Access
+#### FR-004: Track Docker or Approved Runtime Access
 
 User story: As a platform owner, I want Docker/runtime access controlled and validated so that developers can run approved local or remote development environments.
 
@@ -285,42 +269,46 @@ Acceptance criteria:
 
 - The request captures whether local Docker is allowed, VDI-only development is required, or an alternative runtime is approved.
 - The request captures license eligibility, virtualization permission, registry access, and policy acknowledgement.
+- The Docker/runtime setup item is linked to master ticket `IT0001`, approved by the designated approver, and moved to the IT queue before execution.
 - Completion evidence includes `docker version` or an approved equivalent runtime check.
 - If local Docker is not permitted, the system directs the developer to Citrix VDI or approved remote runtime instructions.
 
-#### FR-006: Track Cisco VPN Enrollment
+#### FR-005: Track Cisco VPN Enrollment
 
 User story: As a security approver, I want VPN access requests to include network group, MFA, and profile information so that access follows least privilege.
 
 Acceptance criteria:
 
 - The task captures VPN profile, network group, MFA status, and approver.
+- The Cisco VPN setup item is linked to master ticket `IT0001`, approved by the designated approver, and moved to the IT queue before execution.
 - The system prevents completion until VPN connection validation is recorded.
 - No VPN credentials, MFA secrets, or recovery codes are stored.
 - Failed validation creates a blocker and escalation path.
 
-#### FR-007: Track Zoom Meeting Readiness
+#### FR-006: Track Zoom Meeting Readiness
 
 User story: As a new employee, I want my Zoom access ready before onboarding meetings so that I can join required sessions.
 
 Acceptance criteria:
 
-- The task captures corporate Zoom account activation and SSO readiness.
+- The task captures corporate Zoom account activation and account sign-in readiness without SSO.
 - Calendar integration is tracked where approved.
+- The Zoom setup item is linked to master ticket `IT0001`, approved by the designated approver, and moved to the IT queue before execution.
 - Completion evidence includes ability to join a test meeting or attend onboarding meeting.
 - Zoom blockers can be assigned to IT or the meeting owner.
 
-#### FR-008: Track Citrix VDI Entitlement
+#### FR-007: Track Citrix VDI Entitlement
 
 User story: As a developer working in a restricted client environment, I want Citrix VDI entitlement completed so that I can access approved virtual desktops and development resources.
 
 Acceptance criteria:
 
 - The request captures Citrix Workspace readiness, VDI image assignment, MFA, and required mapped applications or network paths.
+- The Citrix VDI setup item is linked to master ticket `IT0001`, approved by the designated approver, and moved to the IT queue before execution.
 - Completion evidence includes successful VDI launch and validation of required resources.
-- If VDI is mandatory, dependent tasks such as repository access and Docker/runtime validation reflect VDI constraints.
+- If VDI is mandatory, dependent tasks such as Docker/runtime validation reflect VDI constraints.
 
-#### FR-009: Role-Based Dashboard
+#### FR-008: Role-Based Dashboard
 
 User story: As each stakeholder, I want a dashboard showing tasks relevant to my role so that I can act quickly.
 
@@ -331,9 +319,8 @@ Acceptance criteria:
 - IT sees setup requests and validation gaps.
 - Security sees sensitive access approvals and risks.
 - Manager sees readiness milestones and first-week tasks.
-- Client repository owner sees GitHub access requests awaiting action.
 
-#### FR-010: Blocker and Escalation Management
+#### FR-009: Blocker and Escalation Management
 
 User story: As a coordinator, I want blockers escalated with ownership and context so that onboarding delays are resolved quickly.
 
@@ -344,7 +331,7 @@ Acceptance criteria:
 - The system summarizes blockers by onboarding case and owner.
 - Resolved blockers remain visible in the audit trail.
 
-#### FR-011: Knowledge-Grounded Employee Support
+#### FR-010: Knowledge-Grounded Employee Support
 
 User story: As a new hire, I want to ask onboarding questions and receive answers from approved company or client sources so that I can complete setup without waiting for manual help.
 
@@ -355,7 +342,7 @@ Acceptance criteria:
 - The assistant escalates to HR, IT, or security when the answer is missing, sensitive, or low confidence.
 - The assistant never reveals secrets, private credentials, or unauthorized client code.
 
-#### FR-012: Audit Trail
+#### FR-011: Audit Trail
 
 User story: As a security or operations reviewer, I want an audit trail so that access decisions and workflow changes are explainable.
 
@@ -369,7 +356,6 @@ Acceptance criteria:
 ### P1 Enhanced Features
 
 - Real ticketing integration with ServiceNow, Jira Service Management, or equivalent.
-- Real GitHub organization/team/repository API integration, subject to client approval.
 - Slack or Microsoft Teams reminders.
 - Calendar-based onboarding session scheduling.
 - Onboarding cohort view for HR and IT.
@@ -393,9 +379,9 @@ Acceptance criteria:
 These rules make the requirements specific enough for downstream development agents to make consistent implementation decisions.
 
 - Treat `OnboardingCase`, `Task`, `AccessRequest`, `Approval`, `EvidenceCheck`, `Blocker`, and `AuditEvent` as required MVP domain objects.
-- Treat client GitHub, VS Code, Docker/runtime, Cisco VPN, Zoom, and Citrix VDI setup as P0 developer onboarding tasks.
+- Treat VS Code, Docker/runtime, Cisco VPN, Zoom, and Citrix VDI setup as P0 developer onboarding tasks.
 - Use mock adapters for all external system interactions unless a later stakeholder/security decision explicitly approves real API writes.
-- Do not mark client GitHub, VPN, VDI, container registry, or privileged identity requests complete unless both approval and validation evidence exist.
+- Do not mark VPN, VDI, container registry, or privileged identity requests complete unless both approval and validation evidence exist.
 - Do not collect, store, display, log, or send to agents any passwords, MFA secrets, private keys, personal access tokens, recovery codes, or client source code.
 - Store workflow state in the backend persistence layer; do not rely on chat messages or agent memory as authoritative state.
 - Show support chat as an assistive surface, while dashboard, checklist, approval queue, blocker view, and audit timeline remain the primary workflow controls.
@@ -405,13 +391,13 @@ These rules make the requirements specific enough for downstream development age
 
 | MRD ID | MRD Finding | PRD Requirement Coverage |
 | :-- | :-- | :-- |
-| MRD-001 | Fragmented onboarding across teams creates ownership and blocker visibility gaps. | FR-001 Create Developer Onboarding Case; FR-002 Generate Role-Based Onboarding Plan; FR-009 Role-Based Dashboard; FR-010 Blocker and Escalation Management. |
-| MRD-002 | Developer onboarding requires client GitHub, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI setup. | FR-003 through FR-008; Developer Setup Metrics; MVP Scope mocked request flows. |
-| MRD-003 | Sensitive actions require human-in-the-loop approvals. | FR-003 GitHub approval; FR-006 VPN validation; FR-008 VDI entitlement; Security & Compliance NFRs; Build-Agent Decision Rules. |
+| MRD-001 | Fragmented onboarding across teams creates ownership and blocker visibility gaps. | FR-001 Create Developer Onboarding Case; FR-002 Generate Role-Based Onboarding Plan; FR-008 Role-Based Dashboard; FR-009 Blocker and Escalation Management. |
+| MRD-002 | Developer onboarding requires VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI setup. | FR-003 through FR-007; Developer Setup Metrics; MVP Scope mocked request flows. |
+| MRD-003 | Sensitive actions require human-in-the-loop approvals. | FR-005 VPN validation; FR-007 VDI entitlement; Security & Compliance NFRs; Build-Agent Decision Rules. |
 | MRD-004 | Deterministic workflow state should remain authoritative. | Runtime & Agent Specifications; Data Requirements; Reliability NFRs; Build-Agent Decision Rules. |
-| MRD-005 | Completion should be evidence-based. | FR-003 through FR-008 completion evidence; Developer setup checklist fields; Technical Metrics. |
-| MRD-006 | Credentials, MFA secrets, private keys, personal access tokens, recovery codes, and client source code must not be exposed. | FR-003, FR-006, FR-011, FR-012; Security & Compliance NFRs; Risk Mitigation; Assumptions. |
-| MRD-007 | UX should prioritize status clarity over conversational novelty. | FR-009 dashboard; User Experience Design primary screens; Agent Interaction Design; Error Handling. |
+| MRD-005 | Completion should be evidence-based. | FR-003 through FR-007 completion evidence; Developer setup checklist fields; Technical Metrics. |
+| MRD-006 | Credentials, MFA secrets, private keys, personal access tokens, recovery codes, and client source code must not be exposed. | FR-005, FR-007, FR-010, FR-011; Security & Compliance NFRs; Risk Mitigation; Assumptions. |
+| MRD-007 | UX should prioritize status clarity over conversational novelty. | FR-008 dashboard; User Experience Design primary screens; Agent Interaction Design; Error Handling. |
 | MRD-008 | Mock adapters are appropriate for capstone delivery while preserving future integration boundaries. | Integration Requirements; MVP Scope; Out of Scope; P1 enhanced real integrations; Implementation Strategy. |
 | MRD-009 | Success should be measured by readiness, setup completion, blocker resolution, support usefulness, audit coverage, and cycle time. | Business / Operational Metrics; Developer Setup Metrics; Technical Metrics; User Experience Metrics. |
 | MRD-010 | Security assessment is required before delivery. | Security & Compliance NFRs; Phase 2 Build security assessment; Risk Mitigation; Quality Assurance Checklist. |
@@ -428,7 +414,7 @@ These rules make the requirements specific enough for downstream development age
 
 ### Security & Compliance
 
-- Authentication must be designed for SSO integration.
+- The MVP must provide a supported user sign-in flow that does not depend on SSO; the exact mechanism is a project setup/security decision.
 - Authorization must support role-based access control.
 - Access requests must follow least privilege.
 - Sensitive access requires human approval.
@@ -450,7 +436,7 @@ These rules make the requirements specific enough for downstream development age
 
 MVP scaling is limited but the design should support future growth through:
 
-- Adapter interfaces for HRIS, ITSM, GitHub, IAM, VPN, VDI, calendar, and notifications.
+- Adapter interfaces for HRIS, ITSM, IAM, VPN, VDI, calendar, and notifications.
 - Queue-based background processing for reminders and status checks.
 - Configurable role profiles and tool profiles.
 - Tenant or client separation if commercialized.
@@ -482,8 +468,10 @@ Developer setup checklist fields:
 
 - Task name
 - System/tool
+- Master ticket ID
 - Owner
 - Approver
+- IT queue status
 - Status
 - Due date
 - Dependency
@@ -527,8 +515,9 @@ Required interaction behaviors:
 
 ### Developer Setup Metrics
 
-- Client GitHub access completed before first development task: target 95%.
-- VS Code repository open validation completed: target 90%.
+- Master tickets `IT0001` created with five software items: target 100% for developer onboarding cases.
+- Approved setup items added to IT queue within SLA: target 95%.
+- VS Code launch and required extension validation completed: target 90%.
 - Docker or approved runtime validation completed: target 85% where applicable.
 - Cisco VPN validation completed before network-dependent tasks: target 90%.
 - Zoom readiness before onboarding meetings: target 95%.
@@ -580,7 +569,7 @@ In scope:
 
 - Developer onboarding case creation.
 - Role-based onboarding plan generation.
-- Mocked request flows for client GitHub, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI.
+- Mocked setup request flows for VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI.
 - Task dashboard and task detail view.
 - Approval and blocker tracking.
 - Evidence-based completion checks.
@@ -590,7 +579,7 @@ In scope:
 Out of scope for MVP:
 
 - Real payroll or benefits changes.
-- Real client GitHub API writes without explicit client approval.
+- Source-control platform integrations.
 - Real VPN/VDI/IAM provisioning without security review.
 - Storage of credentials or source code.
 - Full HRIS replacement.
@@ -632,7 +621,7 @@ Internal launch approach:
 Potential future commercialization:
 
 - Position as an onboarding orchestration layer for consulting and enterprise delivery teams.
-- Package integration profiles for HRIS, ITSM, GitHub Enterprise, IAM, VPN, VDI, and collaboration tools.
+- Package integration profiles for HRIS, ITSM, IAM, VPN, VDI, and collaboration tools.
 - Offer per-employee, per-onboarding-case, or enterprise workflow pricing.
 
 ## Quality Assurance Checklist
@@ -650,7 +639,6 @@ Potential future commercialization:
 - `project-context/1.define/mrd.md`
 - `.cursor/templates/prd-template.md`
 - `aamad.config.yml`
-- GitHub Docs: managing repository access, https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories
 - Visual Studio Code documentation, https://code.visualstudio.com/docs
 - Docker documentation, https://docs.docker.com/
 - Cisco Secure Client documentation, https://www.cisco.com/c/en/us/support/security/anyconnect-secure-mobility-client/series.html
@@ -662,18 +650,17 @@ Potential future commercialization:
 - The capstone MVP focuses on developer onboarding into client project environments.
 - `crewai` is the selected runtime based on `aamad.config.yml`.
 - Real external integrations may be replaced by mock adapters for capstone delivery.
-- Client GitHub access means access to a client-controlled GitHub organization, repositories, teams, project boards, package registries, and pull request permissions as applicable.
 - Docker access may be local, remote, or disallowed depending on client security policy.
 - Citrix VDI may be mandatory for restricted client environments.
-- Cisco VPN, Citrix VDI, source control, and container registry workflows must not expose credentials or secrets to the onboarding assistant.
+- Cisco VPN, Citrix VDI, and container registry workflows must not expose credentials or secrets to the onboarding assistant.
 - A security assessment is required before delivery.
+- SSO is unavailable and is not a dependency for the MVP; a non-SSO sign-in mechanism must be selected during project setup.
 
 ## Open Questions
 
 - Which HRIS or employee data source should be modeled in the MVP?
-- Which ticketing/request system owns setup requests: ServiceNow, Jira Service Management, GitHub Issues, or another system?
-- Which client GitHub organization, repositories, teams, permission levels, and branch-protection rules are required by developer role?
-- Should repository access be validated by clone, codespace launch, pull request creation, or manual owner confirmation?
+- Which non-SSO user sign-in mechanism is approved for the MVP?
+- Which ticketing/request system owns setup requests: ServiceNow, Jira Service Management, or another system?
 - Which VS Code extensions are mandatory for the client project?
 - Is Docker Desktop approved locally, or must container workflows run inside Citrix VDI or remote development environments?
 - Which Cisco VPN profiles and network groups are required for each developer role?
@@ -693,6 +680,24 @@ Potential future commercialization:
 - Timestamp: 2026-09-23
 - Persona id: `product-mgr`
 - Action: `quality-pass-specificity-traceability`
+- Artifact: `project-context/1.define/prd.md`
+- Source artifact: `project-context/1.define/mrd.md`
+- Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
+- Timestamp: 2026-10-05
+- Persona id: `product-mgr`
+- Action: `align-prd-with-mrd-remove-source-control-integration`
+- Artifact: `project-context/1.define/prd.md`
+- Source artifact: `project-context/1.define/mrd.md`
+- Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
+- Timestamp: 2026-10-05
+- Persona id: `product-mgr`
+- Action: `align-prd-with-it0001-developer-setup-flow`
+- Artifact: `project-context/1.define/prd.md`
+- Source artifact: `project-context/1.define/mrd.md`
+- Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
+- Timestamp: 2026-10-06
+- Persona id: `product-mgr`
+- Action: `remove-sso-requirement`
 - Artifact: `project-context/1.define/prd.md`
 - Source artifact: `project-context/1.define/mrd.md`
 - Resolved `AAMAD_TARGET_RUNTIME`: `crewai`

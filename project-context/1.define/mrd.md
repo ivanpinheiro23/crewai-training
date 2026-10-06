@@ -6,7 +6,7 @@ Employee onboarding remains a high-friction operational workflow for HR, IT, hir
 
 Technical feasibility is high for an MVP if scope is constrained to orchestration, task generation, status tracking, knowledge retrieval, and human approvals. Full autonomous execution across HRIS, payroll, identity, procurement, compliance, and learning systems is feasible only with strong integration boundaries, role-based access control, audit logging, and staged rollout. The configured AAMAD runtime target is `crewai`, which is a reasonable fit for task-oriented agent collaboration in a capstone MVP, especially where distinct agents can represent HR coordination, IT provisioning, compliance review, and employee support.
 
-Recommended strategy: build an internal workflow assistant that coordinates onboarding across systems and stakeholders, starting with a small set of integrations or mocked connectors. For developer onboarding, the workflow should explicitly include access and setup requests for client GitHub repositories, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI so new technical employees can open required requests, receive least-privilege source-code access, install approved tools, join meetings, connect to private networks, and access virtual desktops before their first assigned development task. Position the MVP around measurable operational outcomes: faster time-to-productivity, fewer missed onboarding tasks, lower HR/IT coordination load, improved compliance evidence, and improved new-hire experience. Treat market sizing as adjacent-market evidence, not as proof of standalone demand, until stakeholder discovery confirms the target buyer and deployment model.
+Recommended strategy: build an internal workflow assistant that coordinates onboarding across systems and stakeholders, starting with a small set of integrations or mocked connectors. For developer onboarding, the workflow should explicitly include setup requests for VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI so new technical employees can install approved tools, join meetings, connect to private networks, and access virtual desktops before their first assigned development task. Position the MVP around measurable operational outcomes: faster time-to-productivity, fewer missed onboarding tasks, lower HR/IT coordination load, improved compliance evidence, and improved new-hire experience. Treat market sizing as adjacent-market evidence, not as proof of standalone demand, until stakeholder discovery confirms the target buyer and deployment model.
 
 ## Detailed Findings by Dimension
 
@@ -56,7 +56,7 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 
 - Common enterprise integration targets include Workday, SAP SuccessFactors, BambooHR, Greenhouse, Lever, Okta, Microsoft Entra ID, ServiceNow, Jira Service Management, Slack, Microsoft Teams, Google Workspace, Microsoft 365, DocuSign, and learning platforms.
 - Typical onboarding task categories include identity provisioning, device shipping, account setup, mandatory policy acknowledgements, tax/payroll setup, benefits enrollment, role-specific training, and manager check-ins.
-- Developer onboarding setup should include request workflows and verification checks for client GitHub repository access, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI.
+- Developer onboarding setup should include request workflows and verification checks for VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI.
 - Security and privacy obligations may involve SOC 2 controls, GDPR, CCPA/CPRA, HIPAA for covered employers, regional labor laws, and internal access governance.
 - MVP infrastructure can remain modest: web app, API service, database, queue or scheduler, object storage for generated artifacts, and LLM provider integration.
 
@@ -69,7 +69,6 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 - ServiceNow HR Service Delivery, https://www.servicenow.com/products/hr-service-delivery.html
 - NIST Cybersecurity Framework 2.0, https://www.nist.gov/cyberframework
 - Visual Studio Code documentation, https://code.visualstudio.com/docs
-- GitHub Docs, managing repository access, https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories
 - Docker documentation, https://docs.docker.com/
 - Cisco Secure Client documentation, https://www.cisco.com/c/en/us/support/security/anyconnect-secure-mobility-client/series.html
 - Zoom support documentation, https://support.zoom.com/
@@ -84,15 +83,17 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 
 #### Developer Setup Rules
 
-- Client GitHub repositories: create or verify the request for access to the client's GitHub organization, required repositories, teams, branch protections, issue/project boards, package registries, and code review permissions. Access must be least privilege and based on role, project assignment, employment type, and start/end dates. Completion evidence should include successful SSO authentication, repository visibility, approved clone or codespace access, and confirmation that the developer can open required pull requests according to client contribution rules.
-- VS Code: create or verify the request for approved IDE access, required extensions, settings sync policy, and authentication to source control. Completion evidence should include successful client repository clone/open in VS Code and any required extension installation status.
-- Docker: create or verify the request for Docker Desktop or approved container runtime access, license eligibility, local virtualization permissions, registry access, and security policy agreement. Completion evidence should include a successful `docker version` or approved equivalent runtime check.
-- Cisco VPN: create or verify the request for Cisco Secure Client access, VPN profile assignment, MFA enrollment, and network group membership. Completion evidence should include successful VPN connection to the approved developer network without storing credentials in the onboarding system.
-- Zoom: create or verify the request for corporate Zoom account activation, SSO sign-in, calendar integration where approved, and required meeting settings. Completion evidence should include ability to join a test meeting and access team onboarding sessions.
-- Citrix VDI: create or verify the request for Citrix Workspace or VDI entitlement, desktop image assignment, MFA, and access to required development resources inside the virtual desktop. Completion evidence should include successful VDI launch and validation of mapped applications or network paths.
-- All developer setup tasks must capture request ID, requester, approver, system owner, due date, completion status, validation result, and escalation path.
+- Create one IT service ticket per onboarding case with the fixed identifier pattern `IT0001` (for example, `IT0001-<onboarding_case_id>`), used as the master developer setup request.
+- The master `IT0001` ticket must contain five detailed software access items: VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI.
+- For each software item in `IT0001`, the workflow must follow this sequence: request details captured -> approver assigned -> approver decision recorded -> item sent to IT execution queue -> completion evidence validated.
+- VS Code item in `IT0001`: capture approved IDE access, required extensions, and settings sync policy. Completion evidence must include successful VS Code launch and required extension installation status.
+- Docker item in `IT0001`: capture Docker Desktop or approved runtime access, license eligibility, local virtualization permissions, registry access, and security policy agreement. Completion evidence must include successful `docker version` or approved equivalent runtime check.
+- Cisco VPN item in `IT0001`: capture Cisco Secure Client access, VPN profile assignment, MFA enrollment, and network group membership. Completion evidence must include successful connection to the approved developer network without storing credentials in the onboarding system.
+- Zoom item in `IT0001`: capture corporate Zoom account activation, account sign-in readiness without SSO, approved calendar integration, and required meeting settings. Completion evidence must include ability to join a test meeting and access onboarding sessions.
+- Citrix VDI item in `IT0001`: capture Citrix Workspace or VDI entitlement, desktop image assignment, MFA, and required development resources inside the virtual desktop. Completion evidence must include successful VDI launch and validation of mapped applications or network paths.
+- Every `IT0001` software item must capture request ID, requester, approver, system owner, queue-entry timestamp, due date, completion status, validation result, and escalation path.
 - Access requests must apply least privilege and be tied to role, project, location, employment type, and start date.
-- Client source-code access must include repository owner approval, expected permission level, expiration or review date, and confirmation that secrets, private keys, and client code are not copied outside approved environments.
+- Any approved access to client source code must follow the client's access policies and confirm that secrets, private keys, and client code are not copied outside approved environments.
 
 ### 3. User Experience & Workflow Analysis
 
@@ -108,7 +109,7 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 
 - New-hire onboarding spans multiple time windows: preboarding, day one, week one, first 30 days, first 60 days, and first 90 days.
 - Common failure points include late equipment shipment, missing access, unclear first-day schedule, incomplete paperwork, policy confusion, manager inaction, and fragmented communication channels.
-- Developer-specific failure points include missing client GitHub organization access, missing repository or team permissions, unapproved container runtime access, VPN profile delays, Zoom SSO issues, and Citrix VDI entitlement gaps.
+- Developer-specific failure points include unapproved container runtime access, VPN profile delays, Zoom account sign-in issues, and Citrix VDI entitlement gaps.
 - Workflow usability should be measured by task completion rate, mean time to resolve blockers, support-ticket deflection, first-day readiness rate, and stakeholder satisfaction.
 
 #### Source Citations
@@ -123,7 +124,7 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 - The interface should prioritize status clarity over conversational novelty.
 - Chat should be a support surface, not the only control surface.
 - The MVP should include role-specific checklists and a blocker/escalation path.
-- The developer onboarding view should expose each required setup request with status, approver, blocker reason, validation evidence, and next action, including client GitHub repositories and permission levels.
+- The developer onboarding view should expose each required setup request with status, approver, blocker reason, validation evidence, and next action.
 
 ### 4. Production & Operations Requirements
 
@@ -137,9 +138,9 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 
 #### Data Points
 
-- Security controls should include SSO, RBAC, least privilege, encryption in transit and at rest, secrets management, audit logging, rate limiting, data minimization, and tenant isolation if multi-tenant.
+- Security controls should include a supported sign-in flow that does not depend on SSO, RBAC, least privilege, encryption in transit and at rest, secrets management, audit logging, rate limiting, data minimization, and tenant isolation if multi-tenant.
 - Operational metrics should include onboarding cycle time, task SLA breach count, failed integration calls, approval latency, unresolved blockers, LLM cost per onboarded employee, and knowledge-answer quality.
-- Developer setup operations should track SLA and exception metrics for client GitHub repository access, IDE access, Docker/runtime approval, VPN profile assignment, Zoom activation, and Citrix VDI entitlement.
+- Developer setup operations should track SLA and exception metrics for IDE access, Docker/runtime approval, VPN profile assignment, Zoom activation, and Citrix VDI entitlement.
 - A reasonable MVP can use local development plus a deployable cloud path; production should use managed database, queue, logs, and secrets manager.
 
 #### Source Citations
@@ -155,7 +156,7 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 - The MVP should include auth boundaries even if connectors are mocked.
 - The architecture should avoid placing secrets, raw employee documents, or unnecessary personal data in LLM prompts.
 - Security assessment is required by `aamad.config.yml` and should occur before delivery.
-- VPN, VDI, GitHub, source control, and container registry requests should never expose passwords, MFA secrets, private keys, personal access tokens, recovery codes, or client source code to the workflow assistant.
+- VPN, VDI, and container registry requests should never expose passwords, MFA secrets, private keys, personal access tokens, recovery codes, or client source code to the workflow assistant.
 
 ### 5. Innovation & Differentiation Analysis
 
@@ -203,7 +204,7 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 - Use `crewai` for the capstone MVP agent orchestration layer.
 - Keep workflow state deterministic in an application database; do not make agent memory the system of record.
 - Use mocked connector adapters for initial HRIS, IAM, ITSM, calendar, and messaging flows.
-- Include mocked service-request adapters for client GitHub repository access, VS Code/source control setup, Docker/container runtime approval, Cisco VPN enrollment, Zoom account activation, and Citrix VDI entitlement.
+- Include mocked service-request adapters for VS Code setup, Docker/container runtime approval, Cisco VPN enrollment, Zoom account activation, and Citrix VDI entitlement.
 - Add real integrations only behind permissioned service interfaces with validation and audit logging.
 - Use retrieval over approved internal policy documents for new-hire Q&A.
 
@@ -247,32 +248,32 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 - Build a role-based onboarding workflow dashboard.
 - Implement task orchestration with agent-generated task plans and deterministic status tracking.
 - Add mock adapters for HRIS, IAM, ITSM, calendar, messaging, and document acknowledgment.
-- Add developer setup request flows for client GitHub repository access, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI with evidence-based completion checks.
+- Add developer setup request flows for VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI with evidence-based completion checks.
 - Add a knowledge-grounded employee support assistant for onboarding policies and FAQs.
 - Define acceptance criteria for readiness, task completion, escalation, audit logs, and access controls.
+
+### Long-Term Strategy For 6-12 Months
+
+- Add production connectors for the highest-value systems first: HRIS, ITSM, and collaboration platforms. Authentication must continue to work without SSO.
+- Expand workflows to transfers, offboarding, contractor onboarding, and access recertification.
+- Add analytics for cycle time, bottlenecks, SLA breaches, sentiment, and ticket deflection.
+- Establish governance: policy document ownership, LLM evaluation suite, connector permissions, and quarterly security review.
+- Validate commercial demand through pilots, pricing discovery, and partner marketplace feasibility.
 
 ## Traceability Anchors For PRD
 
 | MRD ID | Insight / Finding | Product Requirement Implication |
 | :-- | :-- | :-- |
 | MRD-001 | Onboarding is fragmented across HR, IT, security, managers, facilities, payroll, and new hires. | PRD must define a central onboarding case, role-based task dashboard, owner assignment, blockers, and escalation workflow. |
-| MRD-002 | Developer onboarding requires client GitHub repository access, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI setup. | PRD must include explicit P0 setup/access requirements and acceptance criteria for each developer tool/service. |
-| MRD-003 | Sensitive actions require human-in-the-loop approvals. | PRD must require approval workflows for client source-code access, VPN, VDI, identity, container registry, and privileged setup tasks. |
+| MRD-002 | Developer onboarding requires VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI setup. | PRD must include explicit P0 setup/access requirements and acceptance criteria for each developer tool/service. |
+| MRD-003 | Sensitive actions require human-in-the-loop approvals. | PRD must require approval workflows for VPN, VDI, identity, container registry, and privileged setup tasks. |
 | MRD-004 | Deterministic workflow state should remain authoritative; agent reasoning should not be the system of record. | PRD must require persisted onboarding cases, tasks, access requests, approvals, evidence checks, blockers, and audit events. |
-| MRD-005 | Completion should be evidence-based rather than informal status tracking. | PRD must require validation evidence for GitHub, VS Code, Docker/runtime, Cisco VPN, Zoom, and Citrix VDI setup completion. |
+| MRD-005 | Completion should be evidence-based rather than informal status tracking. | PRD must require validation evidence for VS Code, Docker/runtime, Cisco VPN, Zoom, and Citrix VDI setup completion. |
 | MRD-006 | The system must avoid exposing credentials, MFA secrets, private keys, personal access tokens, recovery codes, or client source code. | PRD must include security NFRs and acceptance criteria forbidding secret/source-code collection, storage, prompt inclusion, and audit leakage. |
 | MRD-007 | The interface should prioritize status clarity over conversational novelty. | PRD must specify dashboard-first UX, checklist views, approval queues, blocker views, and support chat as a secondary support surface. |
 | MRD-008 | Mock adapters are appropriate for capstone delivery while preserving future integration boundaries. | PRD must scope MVP integrations as mocked adapters and defer real external writes until stakeholder/security approval. |
 | MRD-009 | Success should be measured by readiness, cycle time, blocker resolution, support-ticket deflection, satisfaction, and setup SLA metrics. | PRD must define measurable KPIs for first-day readiness, setup completion, blocker resolution, support usefulness, audit coverage, and agent performance. |
 | MRD-010 | Security assessment is required before delivery. | PRD must include security assessment, dependency audit, RBAC, audit logging, and least-privilege requirements. |
-
-### Long-Term Strategy For 6-12 Months
-
-- Add production connectors for the highest-value systems first: HRIS, identity provider, ITSM, and collaboration platform.
-- Expand workflows to transfers, offboarding, contractor onboarding, and access recertification.
-- Add analytics for cycle time, bottlenecks, SLA breaches, sentiment, and ticket deflection.
-- Establish governance: policy document ownership, LLM evaluation suite, connector permissions, and quarterly security review.
-- Validate commercial demand through pilots, pricing discovery, and partner marketplace feasibility.
 
 ## Sources
 
@@ -297,11 +298,10 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 19. IBM Cost of a Data Breach Report 2024, https://www.ibm.com/reports/data-breach
 20. UiPath automation resources, https://www.uipath.com/resources/automation
 21. Visual Studio Code documentation, https://code.visualstudio.com/docs
-22. GitHub Docs, managing repository access, https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories
-23. Docker documentation, https://docs.docker.com/
-24. Cisco Secure Client documentation, https://www.cisco.com/c/en/us/support/security/anyconnect-secure-mobility-client/series.html
-25. Zoom support documentation, https://support.zoom.com/
-26. Citrix Workspace app documentation, https://docs.citrix.com/en-us/citrix-workspace-app.html
+22. Docker documentation, https://docs.docker.com/
+23. Cisco Secure Client documentation, https://www.cisco.com/c/en/us/support/security/anyconnect-secure-mobility-client/series.html
+24. Zoom support documentation, https://support.zoom.com/
+25. Citrix Workspace app documentation, https://docs.citrix.com/en-us/citrix-workspace-app.html
 
 ## Assumptions
 
@@ -310,15 +310,15 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 - Market-size figures are intentionally described through adjacent categories because no live paid analyst dataset was accessed during this draft.
 - The configured AAMAD runtime target is `crewai` based on `aamad.config.yml`.
 - Initial integrations may be mocked for capstone delivery while preserving realistic connector boundaries.
-- Developer onboarding requires setup/access workflows for client GitHub repositories, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI.
+- Developer onboarding requires setup workflows for VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI.
 - The system will process employee-related personal data, so privacy, security, and audit controls are required even for MVP design.
+- The application must provide a supported sign-in flow without SSO; the exact mechanism remains a Build/security decision.
 
 ## Open Questions
 
 - Is the intended buyer an internal HR/IT operations sponsor, a SaaS customer, or a training evaluator for the capstone?
-- Which HRIS, identity provider, ticketing, messaging, calendar, and document systems should the MVP model?
-- Which internal request system should own developer setup requests for client GitHub repositories, VS Code, Docker, Cisco VPN, Zoom, and Citrix VDI?
-- Which client GitHub organization, repositories, teams, permission levels, and branch-protection rules are required for each developer role?
+- Which HRIS, ticketing, messaging, calendar, and document systems should the MVP model?
+- Which non-SSO user sign-in mechanism is approved for the MVP?
 - What onboarding scope is required: preboarding only, first day, first week, first 30/60/90 days, or the full lifecycle?
 - Which jurisdictions and compliance regimes matter for the target organization?
 - What quantitative success target should define MVP success: readiness rate, cycle-time reduction, fewer tickets, satisfaction, cost reduction, or all of these?
@@ -334,16 +334,26 @@ Recommended strategy: build an internal workflow assistant that coordinates onbo
 - Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
 - Timestamp: 2026-09-23
 - Persona id: `product-mgr`
-- Action: `update-mrd-developer-setup-rules`
-- Artifact: `project-context/1.define/mrd.md`
-- Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
-- Timestamp: 2026-09-23
-- Persona id: `product-mgr`
-- Action: `update-mrd-client-github-access`
+- Action: `update-mrd-developer-access-rules`
 - Artifact: `project-context/1.define/mrd.md`
 - Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
 - Timestamp: 2026-09-23
 - Persona id: `product-mgr`
 - Action: `quality-pass-add-traceability-anchors`
+- Artifact: `project-context/1.define/mrd.md`
+- Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
+- Timestamp: 2026-10-05
+- Persona id: `product-mgr`
+- Action: `remove-unwanted-platform-integration-references`
+- Artifact: `project-context/1.define/mrd.md`
+- Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
+- Timestamp: 2026-10-05
+- Persona id: `product-mgr`
+- Action: `detail-it0001-developer-setup-flow`
+- Artifact: `project-context/1.define/mrd.md`
+- Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
+- Timestamp: 2026-10-06
+- Persona id: `product-mgr`
+- Action: `remove-sso-requirement`
 - Artifact: `project-context/1.define/mrd.md`
 - Resolved `AAMAD_TARGET_RUNTIME`: `crewai`
